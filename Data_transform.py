@@ -15,8 +15,8 @@ from datetime import datetime
 # In[2]:
 
 
-SparkContext.setSystemProperty('spark.executor.memory', '8g')
-conf = SparkConf().setAppName("MUBICS-IC-MLLIB").setMaster("local[4]")
+SparkContext.setSystemProperty('spark.executor.memory', '4g')
+conf = SparkConf().setAppName("MUBICS-IC-MLLIB").setMaster("local[2]")
 sc = SparkContext(conf=conf)
 
 
@@ -28,11 +28,11 @@ FILE_NAME="Reef_Life_Survey_(RLS)#_Global_reef_fish_dataset-fish_surveys.csv"
 
 
 # In[4]: TO-DO -> Leer el fichero en 64 particiones y en una sola línea
-
+file = sc.textFile(FILE_NAME, minPartitions=64)
 
 
 # In[5]: TO-DO -> Leer a una lista las columnas que aparezcan en la primera línea del fichero .csv
-
+columnas = file.take(1)[0].split(',')
 
 print(columnas)
 
