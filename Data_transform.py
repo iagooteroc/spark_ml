@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 
 
+
 # In[2]:
 
 
@@ -55,17 +56,27 @@ def arreglaComas(x):
             nx+=l
     return nx
 
+rddFilas = file.zipWithIndex().filter(lambda x: x[1]!=0).map(lambda x: arreglaComas(x[0]))
 
-rddFilas=None #<- Completar
+# cabecera = file.take(1)
+# rddFilas = file.filter(lambda fila: fila!=cabecera).map(lambda fila: arreglaComas(fila))
 print("TOTAL ROWS: %d"%rddFilas.count())
 
 
 
 # In[7]: TO-DO -> Transformar el RDD de filas a las columnas que nos interesa: SurveyID, SiteLat, SiteLong, Family y Total
+col_idx = []
+col_idx.append(columnas.index("SurveyID"))
+col_idx.append(columnas.index("SiteLat"))
+col_idx.append(columnas.index("SiteLong"))
+col_idx.append(columnas.index("Family"))
+col_idx.append(columnas.index("Total"))
 
-rddProcesado=None #<- Completar
+rddPreprocesado = rddFilas.map(lambda fila: fila.split(','))
+rddProcesado = rddPreprocesado.map(lambda fila: list(filter(lambda x: x[0] in col_idx ,list(enumerate(fila))))).map(lambda x: [j for i,j in x])
+
 print(rddProcesado.first())
-
+# Esto queda como una lista de strings (un string por columna)
 
 # In[8]: Los recuentos de una survey dada los transforma en un vector de recuentos por especies
 
