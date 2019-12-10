@@ -96,11 +96,7 @@ def toVector(familyCountList):
 # Pista: Utilizar el método toVector
 rddVectors=rddProcesado.map(lambda x: ((x[0],x[1],x[2]),(x[3],x[4])))\
 	.groupByKey().map(lambda x: (x[0],toVector(x[1])))
-
-# rddVectors=None #<- Completar
 print(rddVectors.first())
-
-
 
 # A partir de aquí se usará el API de DataFrames, por lo que es necesario pasar el RDD a DataFrame.
 
@@ -118,17 +114,34 @@ def pasaFilaARow(x):
     d["features"]=Vectors.dense(x[2].tolist()+[float(x[0])])
     return Row(**d)
 
-
 # TO-DO -> Conversión de RDD a DataFrame
 # Pista: método toDF
 
 dfVectors=rddVectors.map(lambda x: pasaFilaARow((x[0][1],x[0][2],x[1]))).toDF()
-# dfVectors=None #<- Completar
 dfVectors.show()
 from pyspark.ml import Pipeline
 from pyspark.ml.regression import RandomForestRegressor
 from pyspark.ml.feature import VectorIndexer
 from pyspark.ml.evaluation import RegressionEvaluator
+
+# Análisis preliminar de datos
+# Esquema:
+dfVectors.printSchema()
+# Nº de filas
+print("Nº de filas: {}".format(dfVectors.count()))
+# Estadísticas generales
+dfVectors.describe().show()
+# Nº de latitudes diferentes
+dfVectors.select('latitude').distinct().count()
+# Nº de longitudes diferentes
+dfVectors.select('longitude').distinct().count()
+
+# También pide número de registros, surveys, especies y familias
+# Pero Procesado tiene un número diferente a Vectors :/
+# dfProcesado = rddProcesado.toDF()
+# dfProcesado.printSchema()
+# dfProcesado.describe().show()
+
 
 # In[10]: TO-DO -> Entrenamiento del modelo de Regresión a través del algoritmo Random forest regression de MLLib
 # Partición del conjunto de datos: 70% Training - 30% Test
