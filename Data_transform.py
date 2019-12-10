@@ -79,8 +79,9 @@ print(rddProcesado.first())
 # Esto queda como una lista de strings (un string por columna)
 
 # In[8]: Los recuentos de una survey dada los transforma en un vector de recuentos por especies
-
-familias=map(lambda x: x.strip(),open("familias.txt",'r').readlines())
+# familias=map(lambda x: x.strip(),open("familias.txt",'r').readlines())
+familias=open("familias.txt",'r').readlines()
+familias = [x.replace("\n","") for x in familias] 
 def toVector(familyCountList):
     counts=np.zeros(len(familias))
     for (f,c) in familyCountList:
@@ -91,12 +92,12 @@ def toVector(familyCountList):
         return counts
     return counts/total
 
-
 # TO-DO -> Agrupar las tuplas construidas anteriormente por localización (SurveryID, SiteLat, SiteLong) 
 # Pista: Utilizar el método toVector
+rddVectors=rddProcesado.map(lambda x: ((x[0],x[1],x[2]),(x[3],x[4])))\
+	.groupByKey().map(lambda x: (x[0],toVector(x[1])))
 
-
-rddVectors=None #<- Completar
+# rddVectors=None #<- Completar
 print(rddVectors.first())
 
 
@@ -121,12 +122,35 @@ def pasaFilaARow(x):
 # TO-DO -> Conversión de RDD a DataFrame
 # Pista: método toDF
 
-dfVectors=None #<- Completar
+dfVectors=rddVectors.map(lambda x: pasaFilaARow((x[0][1],x[0][2],x[1]))).toDF()
+# dfVectors=None #<- Completar
 dfVectors.show()
-
-
+from pyspark.ml import Pipeline
+from pyspark.ml.regression import RandomForestRegressor
+from pyspark.ml.feature import VectorIndexer
+from pyspark.ml.evaluation import RegressionEvaluator
 
 # In[10]: TO-DO -> Entrenamiento del modelo de Regresión a través del algoritmo Random forest regression de MLLib
 # Partición del conjunto de datos: 70% Training - 30% Test
 
+(trainingData, testData) = dfVectors.randomSplit([0.7,0.3])
 
+for label in ["latitude", "longitude"]:
+
+	# Train a RandomForest model.
+	rf = RandomForestRegressor(featuresCol="features", labelCol=label)
+
+	# Train model.
+	model = rf.fit(trainingData)
+
+	# Make predictions.
+	predictions = model.transform(testData)
+
+	# Select example rows to display.
+	predictions.select("prediction", label, "features").show(5)
+
+	# Select (prediction, true label) and compute test error
+	evaluator = RegressionEvaluator(
+	    labelCol=label, predictionCol="prediction", metricName="rmse")
+	rmse = evaluator.evaluate(predictions)
+	print("Root Mean Squared Error (RMSE) on %s test data = %g" % (label, rmse))
