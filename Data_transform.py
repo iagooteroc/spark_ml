@@ -77,11 +77,13 @@ rddProcesado = rddPreprocesado.map(lambda fila: list(filter(lambda x: x[0] in co
 
 print(rddProcesado.first())
 # Esto queda como una lista de strings (un string por columna)
-
 # In[8]: Los recuentos de una survey dada los transforma en un vector de recuentos por especies
-# familias=map(lambda x: x.strip(),open("familias.txt",'r').readlines())
-familias=open("familias.txt",'r').readlines()
-familias = [x.replace("\n","") for x in familias] 
+# Hemos cambiado lo de familias para que funcione en python3
+familias=list(map(lambda x: x.strip(),open("familias.txt",'r').readlines()))
+
+# familias=open("familias.txt",'r').readlines()
+# familias = [x.replace("\n","") for x in familias] 
+
 def toVector(familyCountList):
     counts=np.zeros(len(familias))
     for (f,c) in familyCountList:
@@ -116,9 +118,11 @@ def pasaFilaARow(x):
 
 # DONE -> Conversión de RDD a DataFrame
 # Pista: método toDF
-
 dfVectors=rddVectors.map(lambda x: pasaFilaARow((x[0][1],x[0][2],x[1]))).toDF()
+print("dfVectors:")
 dfVectors.show()
+# Esquema:
+dfVectors.printSchema()
 from pyspark.ml import Pipeline
 from pyspark.ml.regression import RandomForestRegressor
 from pyspark.ml.feature import VectorIndexer
@@ -126,24 +130,23 @@ from pyspark.ml.evaluation import RegressionEvaluator
 
 # Análisis preliminar de datos
 #TODO: Mostrar numero de registros, surveys, localizaciones, especies y familias.
+def num_in_features(caracteristica):
+	lista = ["SurveyID","SiteLat","SiteLong","Family","Total"]
+	i = lista.index(caracteristica)
+	return rddProcesado.map(lambda x: x[i]).distinct().count()
 
-# Esquema:
-dfVectors.printSchema()
-# Nº de filas
-print("Nº de filas: {}".format(dfVectors.count()))
 # Estadísticas generales
 dfVectors.describe().show()
+# Nº de surveys diferentes
+print(f"Num SurveyID: {num_in_features('SurveyID')}")
 # Nº de latitudes diferentes
-dfVectors.select('latitude').distinct().count()
+# print(dfVectors.select('latitude').distinct().count())
+print(f"Num Latitude: {num_in_features('SiteLat')}")
 # Nº de longitudes diferentes
-dfVectors.select('longitude').distinct().count()
-
-# También pide número de registros, surveys, especies y familias
-# Pero Procesado tiene un número diferente a Vectors :/
-# dfProcesado = rddProcesado.toDF()
-# dfProcesado.printSchema()
-# dfProcesado.describe().show()
-
+# dfVectors.select('longitude').distinct().count()
+print(f"Num Longitude: {num_in_features('SiteLong')}")
+# Nº de familias diferentes
+print(f"Num Family: {num_in_features('Family')}")
 
 # In[10]: DONE -> Entrenamiento del modelo de Regresión a través del algoritmo Random forest regression de MLLib
 # Partición del conjunto de datos: 70% Training - 30% Test
