@@ -35,7 +35,7 @@ file = sc.textFile(FILE_NAME, minPartitions=64)
 # In[5]: DONE -> Leer a una lista las columnas que aparezcan en la primera línea del fichero .csv
 columnas = file.take(1)[0].split(',')
 
-print(columnas)
+print("Columnas: {}".format(columnas))
 
 
 # In[6]: DONE -> Contruir el RDD a partir del conjunto de datos, separando por columnas y eliminando la cabecera
@@ -74,7 +74,7 @@ col_idx.append(columnas.index("Total"))
 
 rddPreprocesado = rddFilas.map(lambda fila: fila.split(','))
 rddProcesado = rddPreprocesado.map(lambda fila: list(filter(lambda x: x[0] in col_idx ,list(enumerate(fila))))).map(lambda x: [j for i,j in x])
-
+print("rddProcesado.first():")
 print(rddProcesado.first())
 # Esto queda como una lista de strings (un string por columna)
 # In[8]: Los recuentos de una survey dada los transforma en un vector de recuentos por especies
@@ -98,6 +98,7 @@ def toVector(familyCountList):
 # Pista: Utilizar el método toVector
 rddVectors=rddProcesado.map(lambda x: ((x[0],x[1],x[2]),(x[3],x[4])))\
 	.groupByKey().map(lambda x: (x[0],toVector(x[1])))
+print("rddVectors.first():")
 print(rddVectors.first())
 
 # A partir de aquí se usará el API de DataFrames, por lo que es necesario pasar el RDD a DataFrame.
@@ -152,11 +153,24 @@ print(f"Num Family: {num_in_features('Family')}")
 # Partición del conjunto de datos: 70% Training - 30% Test
 
 (trainingData, testData) = dfVectors.randomSplit([0.7,0.3])
-
+print("======================")
+print("RandomForestRegressor:")
 for label in ["latitude", "longitude"]:
-
 	rf = RandomForestRegressor(featuresCol="features", labelCol=label)
 	model = rf.fit(trainingData)
+	predictions = model.transform(testData)
+	predictions.select("prediction", label, "features").show(5)
+	evaluator = RegressionEvaluator(
+	    labelCol=label, predictionCol="prediction", metricName="rmse")
+	rmse = evaluator.evaluate(predictions)
+	print("Root Mean Squared Error (RMSE) on %s test data = %g" % (label, rmse))
+
+from pyspark.ml.regression import GBTRegressor
+print("======================")
+print("GBTRegressor:")
+for label in ["latitude", "longitude"]:
+	gbt = GBTRegressor(featuresCol="features", labelCol=label)
+	model = gbt.fit(trainingData)
 	predictions = model.transform(testData)
 	predictions.select("prediction", label, "features").show(5)
 	evaluator = RegressionEvaluator(
